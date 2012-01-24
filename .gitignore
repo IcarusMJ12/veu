@@ -1,0 +1,8 @@
+*.log
+*.pyc
+*.swo
+*.swp
+*~
+tags
+parser.out
+parsetab.py
