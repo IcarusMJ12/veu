@@ -84,7 +84,10 @@ def toDict(l):
     return d
 
 def nom(buf):
-    return toDict(parser.parse(buf))
+    if len(buf.strip()):
+        return toDict(parser.parse(buf))
+    else:
+        return {}
 
 if __name__=='__main__':
     import argparse

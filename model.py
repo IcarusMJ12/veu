@@ -79,7 +79,7 @@ class Province(TimedDict):
         super(Province, self).__init__(d)
         self._d[the_beginning]['name']=name.title()
         self._d[the_beginning]['code']=int(code)
-
+    
 class Areas(dict):
     def __init__(self):
         self._codes_by_name={}
