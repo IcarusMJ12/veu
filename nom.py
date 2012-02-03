@@ -13,28 +13,22 @@ tokens = (
         'RCURLY',
         'ITEM',
         'SEPARATOR',
-        'NEWLINE',
         )
 
 precedence = (
         ('left', 'SEPARATOR'),
-        ('left', 'NEWLINE'),
         )
 
 t_LCURLY                    = r'\{'
 t_RCURLY                    = r'\}'
 t_SEPARATOR             = r'='
 t_ITEM                      = r'[a-zA-Z0-9_\-\.]+|\'.+\'|\".+\"'
-t_ignore                    = ' \t\r'
+t_ignore                    = ' \t\r\n'
 t_ignore_COMMENT    = r'\#.*'
 
 def t_error(t):
     logging.error("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
-
-def t_NEWLINE(t):
-    r'\n+'
-    t.lexer.lineno += len(t.value)
 
 lexer=lex.lex()
 
@@ -53,10 +47,6 @@ def p_item_separator_expression(p):
 def p_curly_expression_curly(p):
     'expression : LCURLY expression RCURLY'
     p[0]=toDict(p[2])
-
-def p_expression_newline_expression(p):
-    'expression : expression NEWLINE expression'
-    p[0]=p[1]+p[3]
 
 def p_expression_expression(p):
     'expression : expression expression'
