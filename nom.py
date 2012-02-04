@@ -15,9 +15,11 @@ tokens = (
         'SEPARATOR',
         )
 
+"""
 precedence = (
         ('left', 'SEPARATOR'),
         )
+"""
 
 t_LCURLY                    = r'\{'
 t_RCURLY                    = r'\}'
@@ -32,25 +34,49 @@ def t_error(t):
 
 lexer=lex.lex()
 
-def p_item_separator_item(p):
-    'expression : ITEM SEPARATOR ITEM'
-    p[0]=[(p[1],p[3])]
+def p_keyvalue_keyvalue(p):
+    'keyvalues : keyvalue keyvalue'
+    p[0]=p[1]+p[2]
 
-def p_item_separator_curlies(p):
-    'expression : ITEM SEPARATOR LCURLY RCURLY'
-    p[0]=[(p[1],None)]
+def p_keyvalues_keyvalue(p):
+    'keyvalues : keyvalues keyvalue'
+    p[0]=p[1]+p[2]
 
-def p_item_separator_expression(p):
-    'expression : ITEM SEPARATOR expression'
-    p[0]=[(p[1],p[3])]
+def p_key_value(p):
+    'keyvalue : key value'
+    p[0]=[(p[1],p[2])]
 
-def p_curly_expression_curly(p):
-    'expression : LCURLY expression RCURLY'
+def p_value_value(p):
+    'values : value value'
+    p[0]=[p[1], p[2]]
+
+def p_value_values(p):
+    'values : values value'
+    p[0]=p[1]+[p[2]]
+
+def p_curly_curly(p):
+    'value : LCURLY RCURLY'
+    p[0]=None
+
+def p_curly_values_curly(p):
+    'value : LCURLY values RCURLY'
+    p[0]=tuple(p[2])
+
+def p_curly_keyvalues_curly(p):
+    'value : LCURLY keyvalues RCURLY'
     p[0]=toDict(p[2])
 
-def p_expression_expression(p):
-    'expression : expression expression'
-    p[0]=p[1]+p[2]
+def p_curly_keyvalue_curly(p):
+    'value : LCURLY keyvalue RCURLY'
+    p[0]=toDict(p[2])
+
+def p_item_separator(p):
+    'key : ITEM SEPARATOR'
+    p[0]=p[1]
+
+def p_item(p):
+    'value : ITEM'
+    p[0]=p[1]
 
 def p_error(p):
     logging.error("Error parsing '%s'." % p)
@@ -75,7 +101,7 @@ def toDict(l):
 
 def nom(buf):
     if len(buf.strip()):
-        return toDict(parser.parse(buf))
+        return toDict(parser.parse(buf, debug=True))
     else:
         return {}
 
@@ -89,3 +115,4 @@ if __name__=='__main__':
     logging.basicConfig(level=loglevel)
     with open(options.file[0],'rb') as f:
         buf=f.read()
+        print nom(buf)
