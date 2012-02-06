@@ -8,7 +8,7 @@ import logging
 import types
 import re
 import glob
-from os.path import basename
+from os.path import basename, splitext
 import getpass
 
 from nom import nom
@@ -128,7 +128,7 @@ class Veu(object):
             with open(filename, 'r') as f:
                 code_and_name=basename(filename).split('-')
                 code=code_and_name[0].strip()
-                name='-'.join(code_and_name[1:]).strip()
+                name=splitext('-'.join(code_and_name[1:]).strip())[0]
                 yield f, code, name
 
     def _loadProvinces(self):
