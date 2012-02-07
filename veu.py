@@ -178,6 +178,7 @@ class Veu(object):
         pygame.display.set_mode((200,1))
         pygame.font.init()
 
+        #colors for the political map
         if not len(self.positions):
             self._loadPositions()
         if not len(self.provinces):
@@ -226,11 +227,11 @@ class Veu(object):
             try:
                 province=self.provinces[key][date]
                 if 'citysize' in province.keys():
-                    text=font.render(province['base_tax']+'/'+province['manpower']+'/'+str(units(province['citysize'],province['base_tax']))[0:4],False,TEXT_COLOR)
+                    text=font.render(province['base_tax']+'/'+province['manpower']+'/'+str(units(province['citysize'],province['base_tax']))[0:4],True,TEXT_COLOR)
                 else:
-                    text=font.render(province['base_tax']+'/'+province['manpower']+'/-',False,TEXT_COLOR)
+                    text=font.render(province['base_tax']+'/'+province['manpower']+'/-',True,TEXT_COLOR)
                 screen.blit(text,(x_mid-text.get_width()/2, y_mid))
-                text=font.render(province['owner'],False,TEXT_COLOR)
+                text=font.render(province['owner'],True,TEXT_COLOR)
                 screen.blit(text,(x_mid-text.get_width()/2,y_mid-size[1]))
             except KeyError as e:
                 self._logger.debug(str(e)+' for '+str(key))
