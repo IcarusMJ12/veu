@@ -70,12 +70,13 @@ class Map(object):
         if color_map:
             result=result.copy()
             data=result.load()
-            for p in data:
-                try:
-                    p=color_map[p]
-                except KeyError:
-                    if default:
-                        p=default
+            for x in xrange(result.size[0]):
+                for y in xrange(result.size[1]):
+                    try:
+                        data[x, y]=color_map[data[x,y]]
+                    except KeyError:
+                        if default:
+                            data[x,y]=default
         edges=self.getEdges()
         return Image.composite(result, edges, edges)
 
@@ -142,24 +143,34 @@ class Veu(object):
     def _loadProvinceColors(self):
         self._logger.info("reading province colors...")
         self.province_colors={}
-        with open(self.path+'/map/definition.csv') as f:
+        with open(self.path+'map/definition.csv') as f:
             f.readline()
             for line in f:
                 elements=line.split(';')
-                self.province_colors[elements[0]]=[int(e) for e in elements[1:]].append(255)
+                self.province_colors[int(elements[0])]=tuple([int(e) for e in elements[1:4]]+[255])
+        #self._logger.debug('province_colors: '+str(self.province_colors))
     
     def _loadCountryColors(self):
         self._logger.info("reading country colors...")
         self.country_colors={}
-        for filename in glob.iglob(self.path+'/common/countries/*.txt'):
+        name_code_map={}
+        with open(self.path+'common/countries.txt', 'r') as f:
+            for line in f:
+                values=line.split('=')
+                if len(values)<2:
+                    continue
+                code, filename = values
+                name=splitext(basename(filename))[0].lower()
+                name_code_map[name.strip()]=code.strip()
+        self._logger.debug('name_code_map: '+str(name_code_map))
+        for filename in glob.iglob(self.path+'common/countries/*.txt'):
             self._logger.debug("nomming "+filename+'...')
             with open(filename, 'r') as f:
                 d=nom(f.read())
                 try:
-                    self.country_colors[basename(filename)]=d['color']
-                except KeyError:
-                    print filename
-                    print d
+                    self.country_colors[name_code_map[splitext(basename(filename))[0].lower()]]=tuple([int(channel) for channel in d['color']])
+                except KeyError as e:
+                    self._logger.error(filename+': '+str(e)+' '+str(d))
 
     def showMap(self, destination=None, date=the_beginning):
         pygame.display.init()
@@ -171,14 +182,20 @@ class Veu(object):
             self._loadPositions()
         if not len(self.provinces):
             self._loadProvinces()
-        #self._loadCountryColors()
-        #self._loadProvinceColors()
-        #TODO
+        self._loadCountryColors()
+        self._loadProvinceColors()
+        color_map={}
+        for province in self.provinces.values():
+            province=province[date]
+            try:
+                color_map[self.province_colors[province['code']]]=self.country_colors[province['owner']]
+            except KeyError:
+                pass
 
         #render map
         m=Map(Image.open(self.map_path).convert('RGBA'), self._logger)
         m.upscale(MAP_SCALE)
-        image=m.getShadedMap()
+        image=m.getShadedMap(color_map)
         map_size=image.size
         screen=pygame.Surface(map_size)
         bg=pygame.image.frombuffer(image.tostring('raw','RGBA',0,1),map_size,'RGBA').convert()
