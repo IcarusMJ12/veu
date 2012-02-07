@@ -190,7 +190,10 @@ class Veu(object):
             try:
                 color_map[self.province_colors[province['code']]]=self.country_colors[province['owner']]
             except KeyError:
-                pass
+                if 'base_tax' in province:
+                    color_map[self.province_colors[province['code']]]=(20,20,20,255)
+                else:
+                    color_map[self.province_colors[province['code']]]=(0,0,255,255)
 
         #render map
         m=Map(Image.open(self.map_path).convert('RGBA'), self._logger)
