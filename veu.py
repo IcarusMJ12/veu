@@ -3,6 +3,12 @@
 #This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ or send a letter to Creative Commons, 444 Castro Street, Suite 900, Mountain View, California, 94041, USA.
 
 from PIL import Image, ImageFilter, ImageOps
+from collections import Counter
+from numpy import array
+try:
+    from scipy import weave
+except ImportError:
+    pass
 import pygame
 import logging
 import types
@@ -38,17 +44,22 @@ class Map(object):
         assert(isinstance(amount, int))
         if amount>1:
             new_size=(self._provinces.size[0]*amount, self._provinces.size[1]*amount)
+            self._logger.info('\tresizing...')
             self._provinces=self._provinces.resize(new_size,Image.NEAREST)
+            if 'weave' not in globals():
+                self._logger.warn('\tscipy.weave was not imported; expect ugly-looking maps due to lack of smoothing')
+            else:
+                self._logger.info('\tsmoothing...')
+                r=amount/2
+                s=array(self._provinces)
+                x, y = s.shape[:2]
+                d=s.copy()
+                with open('smoothing.c','r') as f:
+                    smoothing_code=f.read()
+                weave.inline(smoothing_code, ['s','d','x','y','r'], type_converters=weave.converters.blitz)
+                self._provinces=Image.fromarray(d)
             self._scale*=amount
-        self._logger.info("done")
     
-    def _isEdge(self, pixmap, x, y):
-        for a in xrange(-1,2):
-            for b in xrange(-1,2):
-                if pixmap[x+a,y+b]!=pixmap[x,y]:
-                    return True
-        return False
-
     def findEdges(self):
         self._logger.info("finding edges...")
         image=self._provinces.filter(ImageFilter.FIND_EDGES)
@@ -58,7 +69,6 @@ class Map(object):
         image=ImageOps.colorize(image, (255,255,255), (0,0,0)).convert('RGBA')
         image.putalpha(alpha)
         self._edges=image
-        self._logger.info("done")
 
     def getEdges(self):
         if not self._edges:
@@ -68,6 +78,7 @@ class Map(object):
     def getShadedMap(self, color_map=None, default=None):
         result=self._provinces
         if color_map:
+            self._logger.info("recoloring...")
             result=result.copy()
             data=result.load()
             for x in xrange(result.size[0]):
@@ -211,8 +222,9 @@ class Veu(object):
         font_medium=pygame.font.SysFont(self.font,12, True)
         font_large=pygame.font.SysFont(self.font,16, True)
         size_small, size_medium, size_large = font_small.size('%'), font_medium.size('%'), font_large.size('%')
+        self._logger.info("positioning text...")
         for key, value in self.positions.items():
-            self._logger.debug('placing\t'+str(key))
+            self._logger.debug('\tplacing\t'+str(key))
             x1, y1, x2, y2 = MAP_SCALE*value[0], map_size[1]-MAP_SCALE*value[1], MAP_SCALE*value[2], map_size[1]-MAP_SCALE*value[3]
             x_mid, y_mid = (x1+x2)/2, (y1+y2)/2
             max_size = ((x2-x1)/9, (y1-y2)/2)
@@ -254,20 +266,21 @@ if __name__ == '__main__':
     options=parser.parse_args()
     loglevel=logging.DEBUG if options.verbose else logging.INFO
     logging.basicConfig(level=loglevel)
+    logger=logging.getLogger('veu')
     path = options.path[0] if options.path else DEFAULT_PATH
-    veu=Veu(path, logging)
+    veu=Veu(path, logger)
     if options.scale:
         MAP_SCALE=int(options.scale[0])
     if options.map:
-        logging.debug(str(options.map))
+        logger.debug(str(options.map))
         veu.setMap(options.map[0])
     if options.font:
         veu.setFont=options.font[0]
     if options.action[0]=='map':
         if not options.output:
-            logging.critical("Output image must be specified!")
+            logger.critical("Output image must be specified!")
             exit(1)
         else:
             veu.showMap(options.output[0] if options.output else None, options.date[0] if options.date else the_beginning)
     elif options.action[0]=='stats':
-        logging.info("Not implemented.")
+        logger.info("Not implemented.")
