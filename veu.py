@@ -35,7 +35,7 @@ def units(population, base_tax):
     return min(0.99+float(population)/100000, 2)+float(base_tax)/20
 
 class Map(object):
-    def __init__(self, image=None, cache=None, scale=MAP_SCALE, loglevel=logging.INFO):
+    def __init__(self, image, cache=None, scale=MAP_SCALE, loglevel=logging.INFO):
         self._logger=logging.getLogger(name=self.__class__.__name__, loglevel=loglevel)
         self._provinces=image
         self._edges=None
@@ -50,6 +50,7 @@ class Map(object):
             try:
                 self._provinces=Image.open(provinces_cache_path)
                 self._edges=Image.open(edges_cache_path)
+                self._logger.info("not resizing or finding edges -- reading from cache instead")
             except IOError:
                 self._logger.info("cache appears to be empty")
                 self._upscale()
@@ -57,7 +58,6 @@ class Map(object):
                 self._provinces.save(provinces_cache_path)
                 self._edges.save(edges_cache_path)
         else:
-            assert(image!=None)
             self._upscale()
             self._findEdges()
     
