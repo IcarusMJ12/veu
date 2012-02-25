@@ -144,12 +144,23 @@ class Veu(object):
                 yield f, code, name
 
     def _loadProvinces(self):
+        self.provinces=Provinces()
         for f, code, name in self._areaFiles('history/provinces/*.txt'):
             self.provinces.addProvince(Province(nom(f.read()),name,code))
     
     def _loadCountries(self):
         for f, code, name in self._areaFiles('history/countries/*.txt'):
             self.countries.addCountry(Country(nom(f.read()),name,code))
+    
+    def _loadSavefile(self, name):
+        self.provinces=Provinces()
+        if not name.endswith('.eu3'):
+            name+='.eu3'
+        with open(self.path+'save games/'+name,'r') as f:
+            all_data=nom(f.read())
+        for k, v in all_data.items():
+            if k.isdigit():
+                self.provinces.addProvince(Province(v,v['name'],k))
     
     def _loadProvinceColors(self):
         self._logger.info("reading province colors...")
@@ -183,7 +194,7 @@ class Veu(object):
                 except KeyError as e:
                     self._logger.error(filename+': '+str(e)+' '+str(d))
 
-    def showMap(self, destination=None, date=the_beginning):
+    def showMap(self, destination=None, date=the_beginning, savename=None):
         pygame.display.init()
         pygame.display.set_caption('veu running...')
         pygame.display.set_mode((200,1))
@@ -192,8 +203,10 @@ class Veu(object):
         #colors for the political map
         if not len(self.positions):
             self._loadPositions()
-        if not len(self.provinces):
+        if not savename:
             self._loadProvinces()
+        else:
+            self._loadSavefile(savename)
         self._loadCountryColors()
         self._loadProvinceColors()
         color_map={}
@@ -238,10 +251,11 @@ class Veu(object):
                 size=size_medium
             try:
                 province=self.provinces[key][date]
+                tax_and_manpower=province['base_tax'].split('.')[0]+'/'+province['manpower'].split('.')[0]+'/'
                 if 'citysize' in province.keys():
-                    text=font.render(province['base_tax']+'/'+province['manpower']+'/'+str(units(province['citysize'],province['base_tax']))[0:4],True,TEXT_COLOR)
+                    text=font.render(tax_and_manpower+str(units(province['citysize'],province['base_tax']))[0:4],True,TEXT_COLOR)
                 else:
-                    text=font.render(province['base_tax']+'/'+province['manpower']+'/-',True,TEXT_COLOR)
+                    text=font.render(tax_and_manpower+'-',True,TEXT_COLOR)
                 screen.blit(text,(x_mid-text.get_width()/2, y_mid))
                 text=font.render(province['owner'],True,TEXT_COLOR)
                 screen.blit(text,(x_mid-text.get_width()/2,y_mid-size[1]))
@@ -261,8 +275,9 @@ if __name__ == '__main__':
     parser.add_argument('--output','-o',nargs=1,help="save resultant image here [png extension recommended]")
     parser.add_argument('--map','-m',nargs=1,help="override default map image to draw upon")
     parser.add_argument('--date','-d',nargs=1,help="select date other than starting")
+    parser.add_argument('--savefile','-s',nargs=1,help="load data from save file instead")
     parser.add_argument('--font','-f',nargs=1,help="use this system font instead")
-    parser.add_argument('--scale','-s',nargs=1,help="scale up the map (defaults to "+str(MAP_SCALE)+")")
+    parser.add_argument('--scale','-S',nargs=1,help="scale up the map (defaults to "+str(MAP_SCALE)+")")
     options=parser.parse_args()
     loglevel=logging.DEBUG if options.verbose else logging.INFO
     logging.basicConfig(level=loglevel)
@@ -281,6 +296,6 @@ if __name__ == '__main__':
             logger.critical("Output image must be specified!")
             exit(1)
         else:
-            veu.showMap(options.output[0] if options.output else None, options.date[0] if options.date else the_beginning)
+            veu.showMap(options.output[0] if options.output else None, options.date[0] if options.date else the_beginning, options.savefile[0] if options.savefile else None)
     elif options.action[0]=='stats':
         logger.info("Not implemented.")

@@ -34,6 +34,10 @@ def p_result(p):
     'result : nothing'
     p[0]=None
 
+def p_result_keyvalues_rcurly(p):
+    'result : keyvalues RCURLY'
+    p[0]=p[1]
+
 def p_result_keyvalues(p):
     'result : keyvalues'
     p[0]=p[1]
@@ -80,7 +84,10 @@ def p_item_separator(p):
 
 def p_item(p):
     'value : ITEM'
-    p[0]=p[1]
+    if p[1][0]=='"' or p[1][0]=="'":
+        p[0]=p[1][1:-1]
+    else:
+        p[0]=p[1]
 
 def p_error(p):
     raise PlyException("Error parsing '%s'." % p)
