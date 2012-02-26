@@ -36,7 +36,8 @@ def units(population, base_tax):
 
 class Map(object):
     def __init__(self, image, cache=None, scale=MAP_SCALE, loglevel=logging.INFO):
-        self._logger=logging.getLogger(name=self.__class__.__name__, loglevel=loglevel)
+        self._logger=logging.getLogger(name=self.__class__.__name__)
+        self._logger.setLevel(loglevel)
         self._provinces=image
         self._edges=None
         self._countries=None
@@ -116,10 +117,11 @@ def _loadPositionsFromLog(self):
                 self.positions[int(coordinates[0])]=[int(c) for c in coordinates[1:]]
 
 class Veu(object):
-    def __init__(self, eu3_data_path, logger):
+    def __init__(self, eu3_data_path, loglevel):
         path=eu3_data_path
         self.path=path
-        self._logger=logger
+        self._logger=logging.getLogger(name=self.__class__.__name__)
+        self._logger.setLevel(loglevel)
 
         self.map_path=path+MAP_FILE
         self._map_size=None
@@ -136,9 +138,6 @@ class Veu(object):
     def setMap(self, map_override):
         self.map_path=map_override
 
-    def setFont(self, font):
-        self.font=font
-    
     def _loadMapSize(self):
         if not self._map_size:
             i=Image.open(self.map_path)
@@ -294,24 +293,24 @@ if __name__ == '__main__':
     options=parser.parse_args()
     loglevel=logging.DEBUG if options.verbose else logging.INFO
     logging.basicConfig(level=loglevel)
-    logger=logging.getLogger('veu')
     path = options.path[0] if options.path else DEFAULT_PATH
-    veu=Veu(path, logger)
+    veu=Veu(path, loglevel)
     cache=options.cache[0] if options.cache else CACHE_DIR
     if options.clear_cache:
+        logging.info("clearing cache!")
         shutil.rmtree(cache)
     if options.scale:
         MAP_SCALE=int(options.scale[0])
     if options.map:
-        logger.debug(str(options.map))
+        logging.debug(str(options.map))
         veu.setMap(options.map[0])
     if options.font:
-        veu.setFont=options.font[0]
+        veu.font=options.font[0]
     if options.action[0]=='map':
         if not options.output:
-            logger.critical("Output image must be specified!")
+            logging.critical("Output image must be specified!")
             exit(1)
         else:
             veu.showMap(options.output[0] if options.output else None, options.date[0] if options.date else the_beginning, options.savefile[0] if options.savefile else None, cache)
     elif options.action[0]=='stats':
-        logger.info("Not implemented.")
+        logging.info("Not implemented.")
