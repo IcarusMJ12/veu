@@ -1,0 +1,1 @@
+catholic,protestant,reformed,orthodox,sunni,shiite,buddhism,hinduism,confucianism,shinto,animism,shamanism,

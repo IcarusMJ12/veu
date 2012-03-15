@@ -1,0 +1,1 @@
+grain,wine,wool,cloth,fish,fur,salt,naval_supplies,copper,gold,iron,slaves,ivory,tea,chinaware,spices,coffee,cotton,sugar,tobacco,unknown
