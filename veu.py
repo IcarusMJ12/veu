@@ -22,7 +22,7 @@ from model import *
 
 MAP_FILE="/map/provinces.bmp"
 MAP_SCALE=8
-SETUP_LOG_FILE="/logs/setup.log"
+SETUP_LOG_PATH="/Users/'+getpass.getuser()+'/Library/Application Support/Steam/SteamApps/common/europa universalis iii - complete/Data/logs/setup.log"
 RE_LOG_POSITION=re.compile(r'Bounding Box of ([0-9]+) => \(([0-9]+),([0-9]+)\) - \(([0-9]+),([0-9]+)\)')
 DEFAULT_FONTS='andalemono,bitstreamverasansmono,lucidaconsole'
 DEFAULT_PATH='/Users/'+getpass.getuser()+'/Library/Application Support/Steam/SteamApps/common/europa universalis iii - complete/Data/'
@@ -103,8 +103,19 @@ def _loadPositionsFromLog(self):
                 coordinates=coordinates.groups()
                 self.positions[int(coordinates[0])]=[int(c) for c in coordinates[1:]]
 
+def _loadPositionsFromDef(self):
+    self._logger.debug("parsing out positions...")
+    with open(self.path+'map/positions.txt','r') as f:
+        positions = nom(f.read())
+        for key, value in positions.items():
+            if 'text_position' not in value.keys():
+                self._logger.warn('\t text_position not found for '+str(key))
+                continue
+            x, y = int(float(value['text_position']['x'])), int(float(value['text_position']['y']))
+            self.positions[int(key)]=[x, y, x+100, y+100]
+
 class Veu(object):
-    def __init__(self, eu3_data_path, logger):
+    def __init__(self, eu3_data_path, eu3_setup_log_path, logger):
         path=eu3_data_path
         self.path=path
         self._logger=logger
@@ -112,9 +123,10 @@ class Veu(object):
         self.map_path=path+MAP_FILE
         self._map_size=None
 
-        self.setup_log_path=path+SETUP_LOG_FILE
+        self.setup_log_path=eu3_setup_log_path
         self.positions={}
-        self._loadPositions=types.MethodType(_loadPositionsFromLog, self, Veu)
+        #self._loadPositions=types.MethodType(_loadPositionsFromLog, self, Veu)
+        self._loadPositions=types.MethodType(_loadPositionsFromDef, self, Veu)
 
         self.provinces=Provinces()
         self.countries=Countries()
@@ -134,23 +146,6 @@ class Veu(object):
             self._map_size=(i.size[0]*MAP_SCALE, i.size[1]*MAP_SCALE)
         return self._map_size
 
-    def _areaFiles(self, relative_path):
-        for filename in glob.iglob(self.path+relative_path):
-            self._logger.debug('nomming '+filename+'...')
-            with open(filename, 'r') as f:
-                code_and_name=basename(filename).split('-')
-                code=code_and_name[0].strip()
-                name=splitext('-'.join(code_and_name[1:]).strip())[0]
-                yield f, code, name
-
-    def _loadProvinces(self):
-        for f, code, name in self._areaFiles('history/provinces/*.txt'):
-            self.provinces.addProvince(Province(nom(f.read()),name,code))
-    
-    def _loadCountries(self):
-        for f, code, name in self._areaFiles('history/countries/*.txt'):
-            self.countries.addCountry(Country(nom(f.read()),name,code))
-    
     def _loadProvinceColors(self):
         self._logger.info("reading province colors...")
         self.province_colors={}
@@ -215,7 +210,7 @@ class Veu(object):
         screen=pygame.Surface(map_size)
         bg=pygame.image.frombuffer(image.tostring('raw','RGBA',0,1),map_size,'RGBA').convert()
         screen.blit(bg,(0,0))
-        screen=pygame.transform.flip(screen,False,True)
+        #screen=pygame.transform.flip(screen,False,True)
 
         #render text
         font_small=pygame.font.SysFont(self.font,8, True)
@@ -257,6 +252,7 @@ if __name__ == '__main__':
     parser=argparse.ArgumentParser(description="Show EU3 province data on a map.")
     parser.add_argument('action',nargs=1,help="action to take", choices=("map","stats"))
     parser.add_argument('--path','-p',nargs=1,help="path to EU3's data directory (containing history and map directories)")
+    parser.add_argument('--setup-log','-S',nargs=1,help="path to EU3's setup log (needed for map province positions)")
     parser.add_argument('--verbose','-v',action='store_true',help="print debugging messages")
     parser.add_argument('--output','-o',nargs=1,help="save resultant image here [png extension recommended]")
     parser.add_argument('--map','-m',nargs=1,help="override default map image to draw upon")
@@ -268,7 +264,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=loglevel)
     logger=logging.getLogger('veu')
     path = options.path[0] if options.path else DEFAULT_PATH
-    veu=Veu(path, logger)
+    setup_log_path = options.setup_log[0] if options.setup_log else SETUP_LOG_PATH
+    veu=Veu(path, setup_log_path, logger)
     if options.scale:
         MAP_SCALE=int(options.scale[0])
     if options.map:
