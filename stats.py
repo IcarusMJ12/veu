@@ -31,11 +31,17 @@ if __name__ == '__main__':
 
     stdout.write('tag'+'\t'+'name')
     for label in labels:
-        stdout.write('\t'+label)
+        if '_' in label:
+            label = label.split('_')
+            stdout.write('\t'+label[0][:4]+'/'+label[1][:4])
+        else:
+            stdout.write('\t'+label)
     for label in extra_labels:
         stdout.write('\t'+label)
     for label in province_labels:
         stdout.write('\t'+label)
+    for label in province_labels:
+        stdout.write('\tmax_'+label)
     stdout.write('\n')
     keys = eu_data.countries.keys()
     keys.sort()
@@ -56,4 +62,6 @@ if __name__ == '__main__':
         stdout.write('\t'+str(len(provinces[key])))
         for label in province_labels:
             stdout.write('\t'+str(sum([int(province[label]) for province in provinces[key]])))
+        for label in province_labels:
+            stdout.write('\t'+str(max([int(province[label]) for province in provinces[key]])))
         stdout.write('\n')
