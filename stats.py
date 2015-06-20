@@ -8,7 +8,7 @@ from os.path import basename, splitext, join
 from glob import glob
 from model import EUData
 
-if __name__ == '__main__':
+def main():
     import argparse
     from sys import exit, stdout
     parser = argparse.ArgumentParser(description=__doc__)
@@ -65,3 +65,6 @@ if __name__ == '__main__':
         for label in province_labels:
             stdout.write('\t'+str(max([int(province[label]) for province in provinces[key]])))
         stdout.write('\n')
+
+if __name__ == '__main__':
+    main()
