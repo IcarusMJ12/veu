@@ -28,7 +28,7 @@ tokens = (
 t_LCURLY = r'\{'
 t_RCURLY = r'\}'
 t_SEPARATOR = r'='
-t_ITEM = r'\'.+\'|\".+\"|[^ \t\r\n\{\}\=\#]+'
+t_ITEM = r'\'[^\']+\'|\"[^\"]+\"|[^ \t\r\n\{\}\=\#]+'
 t_ignore = ' \t\r\n'
 t_ignore_COMMENT = r'\#.*'
 
@@ -72,6 +72,12 @@ def p_value_value(p):
 def p_value_values(p):
     'values : values value'
     p[0] = p[1] + [p[2]]
+
+
+# FU, EU4, with your optional assignment operators
+def p_value_curly_keyvalues_curly(p):
+    'keyvalues : value LCURLY keyvalues RCURLY'
+    p[0] = [(p[1], p[3])]
 
 
 def p_curly_curly(p):
