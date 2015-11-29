@@ -8,15 +8,16 @@ from os.path import basename, splitext, join
 from glob import glob
 from model import EUData
 
+from config import base_path
 
 def main():
     import argparse
     from sys import exit, stdout
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        'basepath', help='Path to the Europa Universalis III\'s Data directory.')
+        'basepath', nargs='?', help='Path to the Europa Universalis\'s Data directory.')
     args = parser.parse_args()
-    eu_data = EUData(args.basepath)
+    eu_data = EUData(args.basepath or base_path)
     provinces = {}
     for province in eu_data.provinces.values():
         try:
