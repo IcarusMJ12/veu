@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from glob import iglob
 from os.path import join
 import csv
@@ -8,6 +6,8 @@ from PIL import Image
 
 from config import map_path
 from nom import nom
+
+__all__ = [ 'positions', 'provinces', 'terrain_bmp', 'terrain_txt', 'definition' ]
 
 def _load(fn):
     if fn.endswith('.bmp'):

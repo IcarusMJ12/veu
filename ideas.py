@@ -113,7 +113,31 @@ def _process_national_ideas(ideas):
 
     return result
     
+ideas_by_tag = {}
 def _load_national_ideas():
+    def tagify(key, val):
+        if len(val) > 1:
+            print val
+            #TODO
+            return
+
+        if 'tag' in val.keys():
+            tags = val['tag']
+            if isinstance(tags, list):
+                for tag in tags:
+                    ideas_by_tag[tag.lower()] = key
+            else:
+                ideas_by_tag[tags.lower()] = key
+        if 'primary_culture' in val.keys():
+            cultures = val['primary_culture']
+            if isinstance(cultures, list):
+                for culture in cultures:
+                    ideas_by_tag[culture] = key
+            else:
+                ideas_by_tag[cultures] = key
+        if 'OR' in val.keys():
+            tagify(key, val['OR'])
+
     result = {}
 
     for fn in iglob(join(common_path, 'ideas/*.txt')):
@@ -123,7 +147,11 @@ def _load_national_ideas():
         with open(fn, 'r') as f:
             data = nom(f.read())
         for k, v in data.iteritems():
-            result[k[:k.find('_')].lower()] = _process_national_ideas(v)
+            key = k[:k.find('_')].lower()
+            ideas = _process_national_ideas(v)
+            result[key] = ideas
+            if 'trigger' in ideas.keys():
+                tagify(key, ideas['trigger'])
 
     return result
 

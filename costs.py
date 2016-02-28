@@ -1,14 +1,10 @@
 #!/usr/bin/env python
 
-import glob
-from os import path
 from decimal import Decimal
-from PIL import Image
 
-from nom import nom
-from config import base_path, common_path, history_path
 from eu_map import terrain_txt
 from terrain import province_terrain, terrain_overrides
+from history import countries, provinces
 
 from ideas import (
     custom_ideas,
@@ -17,12 +13,14 @@ from ideas import (
     get_idea_cost,
     IDEA_COST_PROGRESSION,
     IDEA_SLOTS,
+    ideas_by_tag,
 )
 
 IDEA_COSTS_FMT = "{!s}: {:>36} {:>6}({:6.2f}) {:>6.2f}"
 
 class Countries(object):
     COST_PER_DEV = 0.5
+    # actually provided by Paradox in game files, so no need for this anymore
     #EXTRA_COSTS = {
     #    'sound_toll': 20,
     #    'bosphorous_sound_toll': 10,
@@ -95,7 +93,7 @@ class Countries(object):
         self._province_base_costs = {}
 
         self._load_terrain()
-        self._load_countries()
+        self._load_capitals()
         self._load_provinces()
 
     def _load_terrain(self):
@@ -122,33 +120,21 @@ class Countries(object):
         for k in TEST_TERRAIN.keys():
             assert(TEST_TERRAIN[k] == self._terrain[k])
 
-    def _load_countries(self):
-        for fn in glob.iglob(path.join(history_path, 'countries/*.txt')):
-            data = None
-            with open(fn, 'r') as f:
-                data = f.read()
-            self._load_country(fn, nom(data))
-
-    def _load_country(self, fn, data):
-        tag = fn.split('-')[0].strip()
-        try:
-            self._capitals[tag] = data['capital']
-        except KeyError:
-            pass
+    def _load_capitals(self):
+        for tag, data in countries.iteritems():
+            try:
+                self._capitals[tag] = data['capital']
+            except KeyError:
+                pass
 
     def _load_provinces(self):
-        for fn in glob.iglob(path.join(history_path, 'provinces/*.txt')):
-            data = None
-            with open(fn, 'r') as f:
-                data = f.read()
-            self._load_province(fn, nom(data))
+        for province_id, data in provinces.iteritems():
+            self._load_province(province_id, data)
 
-    def _load_province(self, fn, data):
+    def _load_province(self, province_id, data):
         if 'owner' not in data.keys():
             return
-        owner = data['owner'].lower()
-        fn = path.split(fn)[1]
-        province_id = int(fn.split('-')[0].strip())
+        owner = data['owner']
         try:
             self._owners[owner].append(province_id)
         except KeyError:
@@ -182,9 +168,9 @@ class Countries(object):
     def stats(self):
         costs = {}
 
-        for owner, provinces in self._owners.iteritems():
+        for owner, provs in self._owners.iteritems():
             cost = 0
-            for province_id in provinces:
+            for province_id in provs:
                 cost += self._province_base_costs[province_id]
             try:
                 costs[cost].append(owner)
@@ -223,7 +209,16 @@ class Ideas(object):
 
     def stats_for_owner(self, tag):
         total = 0
-        ideas = national_ideas[tag]
+        try:
+            ideas = national_ideas[tag]
+        except KeyError:
+            country = countries[tag]
+            if country['government'] == 'theocratic_government':
+                ideas = national_ideas['theocracy']
+            else:
+                print 'trying primary_culture'
+                culture = country['primary_culture']
+                ideas = national_ideas[culture]
 
         for slot in IDEA_SLOTS:
             for k, v in ideas[slot]:
@@ -278,11 +273,11 @@ def main():
     options = p.parse_args()
 
     i = None
-    if not options.ideas:
+    if not options.provinces:
         i = Ideas()
 
     c = None
-    if not options.provinces:
+    if not options.ideas:
         c = Countries()
 
     if options.dryrun:
@@ -298,6 +293,7 @@ def main():
     else:
         if i:
             i.stats()
+        print '---------'
         if c:
             c.stats()
 

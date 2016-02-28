@@ -16,7 +16,7 @@ def _load_map():
     return color_map
 
 @pickled
-def _load_terrain():
+def _load_terrain(color_map, terrain_overrides):
     result = {}
     
     # find all colors per province
@@ -24,7 +24,7 @@ def _load_terrain():
         for y in xrange(terrain_bmp.size[1]):
             province_color = provinces.getpixel( (x, y) )
             province_key = definition[province_color]
-            if province_key in _terrain_overrides_keys:
+            if province_key in terrain_overrides:
                 continue
 
             terrain = terrain_bmp.getpixel( (x, y) )
@@ -73,5 +73,4 @@ def _load_terrain_overrides():
 
 color_map = _load_map()
 terrain_overrides = _load_terrain_overrides()
-_terrain_overrides_keys = set(terrain_overrides.keys())
-province_terrain = _load_terrain()
+province_terrain = _load_terrain(color_map, terrain_overrides)
