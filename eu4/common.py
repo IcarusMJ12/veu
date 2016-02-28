@@ -1,8 +1,8 @@
 from glob import iglob
 from os.path import join, split, basename
 
-from config import common_path
-from nom import nom
+from eu4.config import common_path
+from lib.nom import nom
 
 __all__ = [ 'cultures', 'culture_map' ]
 

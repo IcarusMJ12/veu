@@ -4,8 +4,8 @@ import csv
 
 from PIL import Image
 
-from config import map_path
-from nom import nom
+from eu4.config import map_path
+from lib.nom import nom
 
 __all__ = [ 'positions', 'provinces', 'terrain_bmp', 'terrain_txt', 'definition' ]
 

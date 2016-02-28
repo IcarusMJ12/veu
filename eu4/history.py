@@ -1,9 +1,9 @@
 from glob import iglob
 from os.path import join, split, basename
 
-from config import history_path
-from nom import nom
-from memoize import pickled
+from eu4.config import history_path
+from lib.nom import nom
+from lib.memoize import pickled
 
 __all__ = [ 'countries', 'provinces' ]
 

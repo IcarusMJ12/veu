@@ -1,3 +1,0 @@
-This here is a Visualizer for Europa Univeralis 3/4.  It may dump a province map with province statistics for a date of your choice, and in the future will also allow one to export handy stats in a csv format.
-
-Requires Python 2.7 and the PIL and pygame libraries for it.  scipy.weave is not required but is very highly recommended.

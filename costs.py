@@ -2,11 +2,11 @@
 
 from decimal import Decimal
 
-from eu_map import terrain_txt
-from terrain import province_terrain, terrain_overrides
-from history import countries, provinces
+from eu4.eu_map import terrain_txt
+from eu4.terrain import province_terrain, terrain_overrides
+from eu4.history import countries, provinces
 
-from ideas import (
+from eu4.ideas import (
     custom_ideas,
     missing_ideas,
     national_ideas,

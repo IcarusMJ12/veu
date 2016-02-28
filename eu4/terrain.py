@@ -1,8 +1,7 @@
-from eu_map import provinces, terrain_bmp, terrain_txt, definition
+from eu4.eu_map import provinces, terrain_bmp, terrain_txt, definition
+from lib.memoize import pickled
 
 __all__ = ['color_map', 'terrain_overrides', 'province_terrain']
-
-from memoize import pickled
 
 @pickled
 def _load_map():
