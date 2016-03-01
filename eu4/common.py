@@ -6,26 +6,29 @@ from lib.nom import nom
 
 __all__ = [ 'cultures', 'culture_map' ]
 
-def _load_cultures():
-    with open(join(common_path, '00_cultures.txt'), 'r') as f:
+def _load(*args):
+    with open(join(common_path, *args), 'r') as f:
         return nom(f.read())
 
-def _culture_map(cultures):
-    culture_map = {}
+def _reverse_map(dictionary):
+    result = {}
     redundant_keys = set()
 
-    for culture_group, stuff in cultures.iteritems():
+    for group, stuff in dictionary.iteritems():
         for key in stuff.keys():
-            if key not in culture_map:
-                culture_map[key] = culture_group
+            if key not in result:
+                result[key] = group
                 continue
 
             redundant_keys.add(key)
 
     for key in redundant_keys:
-        del culture_map[key]
+        del result[key]
 
-    return culture_map
+    return result
 
-cultures = _load_cultures()
-culture_map = _culture_map(cultures)
+cultures = _load('cultures', '00_cultures.txt')
+culture_map = _reverse_map(cultures)
+religions = _load('religions', '00_religion.txt')
+religion_map = _reverse_map(religions)
+governments = _load('governments', '00_governments.txt')

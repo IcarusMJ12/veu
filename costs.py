@@ -11,9 +11,9 @@ from eu4.ideas import (
     missing_ideas,
     national_ideas,
     get_idea_cost,
+    get_ideas_for_tag,
     IDEA_COST_PROGRESSION,
     IDEA_SLOTS,
-    ideas_by_tag,
 )
 
 IDEA_COSTS_FMT = "{!s}: {:>36} {:>6}({:6.2f}) {:>6.2f}"
@@ -193,7 +193,7 @@ class Countries(object):
 class Ideas(object):
     @staticmethod
     def get_level_and_cost(slot, bonus, magnitude):
-        multiplier = IDEA_COST_PROGRESSION[slot - 1]
+        multiplier = IDEA_COST_PROGRESSION[slot]
         was_missing = True
         try:
             idea = custom_ideas[bonus]
@@ -209,21 +209,11 @@ class Ideas(object):
 
     def stats_for_owner(self, tag):
         total = 0
-        try:
-            ideas = national_ideas[tag]
-        except KeyError:
-            country = countries[tag]
-            if country['government'] == 'theocratic_government':
-                ideas = national_ideas['theocracy']
-            else:
-                print 'trying primary_culture'
-                culture = country['primary_culture']
-                ideas = national_ideas[culture]
+        ideas = get_ideas_for_tag(tag)
 
         for slot in IDEA_SLOTS:
             for k, v in ideas[slot]:
                 level, cost = self.get_level_and_cost(slot, k, v)
-                # print "%i: %s %s(%.2f) %.2f" % (slot, k, v, level, cost)
                 print IDEA_COSTS_FMT.format(slot, k, v, level, cost)
                 total += cost
         print "-------------------"
@@ -287,6 +277,8 @@ def main():
         tag = options.tag.lower()
         if i:
             i.stats_for_owner(tag)
+        if i and c:
+            print '======================\n'
         if c:
             c.stats_for_owner(tag)
 

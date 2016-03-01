@@ -3,14 +3,20 @@
 from glob import iglob
 from os.path import join
 from decimal import Decimal
+from collections import OrderedDict
 
+from eu4.common import culture_map, religion_map, governments
 from eu4.config import common_path
+from eu4.history import countries
 from lib.nom import nom
+
+AND, OR, NOT = 'and', 'or', 'not'
 
 __all__ = [
     'custom_ideas',
     'national_ideas',
     'get_idea_cost',
+    'get_ideas_for_tag',
     'IDEA_COST_PROGRESSION',
     'IDEA_SLOTS',
 ]
@@ -43,7 +49,7 @@ IDEA_COST_DEFAULTS = {
 DEFAULT_MAX_LEVEL = 4
 # starting, then 7, then 1 last bonus
 IDEA_COST_PROGRESSION = ( 2.0, 2.0, 1.8, 1.6, 1.4, 1.2, 1.0, 1.0, 1.0, )
-IDEA_SLOTS = range(1,9)
+IDEA_SLOTS = range(0, 9)
 
 def _load_custom_ideas():
     result = {}
@@ -81,7 +87,7 @@ def _load_custom_ideas():
 
 _saved_ideas = {}
 def _process_national_ideas(ideas):
-    slot = [1,]
+    slot = [ 0 ]
     result = dict([(i, []) for i in IDEA_SLOTS])
 
     def _slot_ideas(items):
@@ -113,32 +119,8 @@ def _process_national_ideas(ideas):
 
     return result
     
-ideas_by_tag = {}
 def _load_national_ideas():
-    def tagify(key, val):
-        if len(val) > 1:
-            print val
-            #TODO
-            return
-
-        if 'tag' in val.keys():
-            tags = val['tag']
-            if isinstance(tags, list):
-                for tag in tags:
-                    ideas_by_tag[tag.lower()] = key
-            else:
-                ideas_by_tag[tags.lower()] = key
-        if 'primary_culture' in val.keys():
-            cultures = val['primary_culture']
-            if isinstance(cultures, list):
-                for culture in cultures:
-                    ideas_by_tag[culture] = key
-            else:
-                ideas_by_tag[cultures] = key
-        if 'OR' in val.keys():
-            tagify(key, val['OR'])
-
-    result = {}
+    result = OrderedDict()
 
     for fn in iglob(join(common_path, 'ideas/*.txt')):
         if fn.endswith('basic_ideas.txt'):
@@ -150,8 +132,6 @@ def _load_national_ideas():
             key = k[:k.find('_')].lower()
             ideas = _process_national_ideas(v)
             result[key] = ideas
-            if 'trigger' in ideas.keys():
-                tagify(key, ideas['trigger'])
 
     return result
 
@@ -203,6 +183,90 @@ def get_idea_cost(idea, level):
         next_cost = defaults[int_level + 1]
     return cost + (next_cost - cost) * (level - int_level)
 
+def get_ideas_for_tag(tag):
+    try:
+        return national_ideas[tag]
+    except KeyError:
+        for ideas in national_ideas.values():
+            if is_tag_for_trigger(ideas['trigger'], tag):
+                return ideas
+        raise
+
+_theocracies = [k for k, v in governments.iteritems() if 'religion' in v.keys()]
+_monarchies = [k for k, v in governments.iteritems() if 'monarchy' in v.keys()]
+def is_tag_for_trigger(trigger, tag, mode=AND):
+    any_match = [ False ] # closure for functions below
+    all_match = [ True ]
+    country = countries[tag] # read-only
+
+    def set_matches(boolean):
+        if boolean:
+            any_match[0] = True
+        else:
+            all_match[0] = False
+    
+    def check_tag(value):
+        set_matches(any(item.lower() == tag for item in value))
+    
+    def check_culture(value):
+        set_matches(
+            any(item.lower() == country['primary_culture'] for item in value)
+        )
+    
+    def check_culture_group(value):
+        group = culture_map[country['primary_culture']]
+        set_matches(any(item.lower() == group for item in value))
+    
+    def check_religion_group(value):
+        group = religion_map[country['religion']]
+        set_matches(any(item.lower() == group for item in value))
+    
+    def check_government(value):
+        government = country['government']
+        found = any(item.lower() == government for item in value)
+        if government in _theocracies:
+            found |= any(item.lower() == 'theocracy' for item in value)
+        if government in _monarchies:
+            found |= any(item.lower() == 'monarchy' for item in value)
+        set_matches(found)
+    
+    def check_tech(value):
+        set_matches(
+            any(item.lower() == country['technology_group'] for item in value)
+        )
+
+    for k, v in trigger.iteritems():
+        k = k.lower()
+        if not isinstance(v, list) and not isinstance(v, OrderedDict):
+            v = [ v ]
+
+        if k == 'tag':
+            check_tag(v)
+        elif k == 'primary_culture':
+            check_culture(v)
+        elif k == 'culture_group':
+            check_culture_group(v)
+        elif k == 'religion_group':
+            check_religion_group(v)
+        elif k == 'government':
+            check_government(v)
+        elif k == 'technology_group':
+            check_tech(v)
+        elif k == OR:
+            set_matches(is_tag_for_trigger(v, tag, OR))
+        elif k == AND:
+            set_matches(is_tag_for_trigger(v, tag, AND))
+        elif k == NOT:
+            set_matches(not is_tag_for_trigger(v, tag, OR))
+
+        if any_match[0] and mode == OR:
+            return True
+    
+    if any_match[0] and all_match[0]:
+        return True
+
+    return False
+        
 if __name__ == '__main__':
     print 'custom ideas:'
     for k, v in custom_ideas.iteritems():
