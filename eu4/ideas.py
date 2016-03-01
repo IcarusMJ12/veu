@@ -185,12 +185,14 @@ def get_idea_cost(idea, level):
 
 def get_ideas_for_tag(tag):
     try:
-        return national_ideas[tag]
+        return (tag, national_ideas[tag])
     except KeyError:
-        for ideas in national_ideas.values():
+        for name, ideas in national_ideas.items():
+            if 'trigger' not in ideas.keys():
+                continue
             if is_tag_for_trigger(ideas['trigger'], tag):
-                return ideas
-        raise
+                return (name, ideas)
+        return ('default', national_ideas['default'])
 
 _theocracies = [k for k, v in governments.iteritems() if 'religion' in v.keys()]
 _monarchies = [k for k, v in governments.iteritems() if 'monarchy' in v.keys()]
@@ -257,7 +259,9 @@ def is_tag_for_trigger(trigger, tag, mode=AND):
         elif k == AND:
             set_matches(is_tag_for_trigger(v, tag, AND))
         elif k == NOT:
-            set_matches(not is_tag_for_trigger(v, tag, OR))
+            if not isinstance(v, list):
+                v = [ v ]
+            set_matches(not any(is_tag_for_trigger(item, tag, OR) for item in v))
 
         if any_match[0] and mode == OR:
             return True

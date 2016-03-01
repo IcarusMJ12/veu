@@ -17,6 +17,8 @@ from eu4.ideas import (
 )
 
 IDEA_COSTS_FMT = "{!s}: {:>36} {:>6}({:6.2f}) {:>6.2f}"
+LINE = '-' * 79
+DOUBLE_LINE = '=' * 79
 
 class Countries(object):
     COST_PER_DEV = 0.5
@@ -187,7 +189,7 @@ class Countries(object):
             cost = self._province_base_costs[province_id]
             print province_id, cost
             total += cost
-        print '----------------'
+        print LINE
         print 'Total', total
 
 class Ideas(object):
@@ -209,14 +211,15 @@ class Ideas(object):
 
     def stats_for_owner(self, tag):
         total = 0
-        ideas = get_ideas_for_tag(tag)
+        name, ideas = get_ideas_for_tag(tag)
 
+        print name, 'ideas:'
         for slot in IDEA_SLOTS:
             for k, v in ideas[slot]:
                 level, cost = self.get_level_and_cost(slot, k, v)
                 print IDEA_COSTS_FMT.format(slot, k, v, level, cost)
                 total += cost
-        print "-------------------"
+        print LINE
         print "Total: %.2f" % total
 
     def stats(self):
@@ -278,14 +281,14 @@ def main():
         if i:
             i.stats_for_owner(tag)
         if i and c:
-            print '======================\n'
+            print DOUBLE_LINE, '\n'
         if c:
             c.stats_for_owner(tag)
 
     else:
         if i:
             i.stats()
-        print '---------'
+        print LINE
         if c:
             c.stats()
 
