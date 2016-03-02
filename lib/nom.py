@@ -28,7 +28,8 @@ tokens = (
 t_LCURLY = r'\{'
 t_RCURLY = r'\}'
 t_SEPARATOR = r'='
-t_ITEM = r'\'[^\']+\'|\"[^\"]+\"|[^ \t\r\n\{\}\=\#]+'
+# t_ITEM = r'\'[^\']+\'|\"[^\"]+\"|[^ \t\r\n\{\}\=\#]+'
+t_ITEM = r'\"[^\"]+\"|[^ \t\r\n\{\}\=\#]+'
 t_ignore = ' \t\r\n'
 t_ignore_COMMENT = r'\#.*'
 

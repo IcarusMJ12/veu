@@ -81,11 +81,11 @@ class Countries(object):
     }
 
     @staticmethod
-    def _get_ruler_cost(self, a, d, m, age):
+    def _get_ruler_cost(a, d, m, age):
         return (a + d + m - 6) * 60/age
 
     @staticmethod
-    def _get_heir_cost(self, a, d, m, age):
+    def _get_heir_cost(a, d, m, age):
         return (a + d + m - 6) * 60/(age + 15)
 
     def __init__(self):
@@ -129,51 +129,92 @@ class Countries(object):
             except KeyError:
                 pass
 
-    def _load_provinces(self):
-        for province_id, data in provinces.iteritems():
-            self._load_province(province_id, data)
+    def _base_cost(self, province_id):
+        data = provinces[province_id]
 
-    def _load_province(self, province_id, data):
-        if 'owner' not in data.keys():
-            return
-        owner = data['owner']
-        try:
-            self._owners[owner].append(province_id)
-        except KeyError:
-            self._owners[owner] = [province_id,]
-        try:
-            cost = (
-                int(data['base_tax']) +
-                int(data['base_production']) +
-                int(data['base_manpower'])
-            ) * 0.5 * self.TERRAIN_MULTIPLIERS[self._terrain[province_id]]
-        except KeyError:
-            print owner, fn, self._terrain[province_id]
-            cost = 0
+        return (
+            int(data['base_tax']) +
+            int(data['base_production']) +
+            int(data['base_manpower'])
+        ) * 0.5 * self.TERRAIN_MULTIPLIERS[self._terrain[province_id]]
+
+    def _extra_cost(self, province_id):
+        cost = 0
+        data = provinces[province_id]
         if data['trade_goods'] == 'gold':
             cost += self.GOLD_MULTIPLIER * int(data['base_production'])
         if 'extra_cost' in data.keys():
             cost += int(data['extra_cost'])
-        self._province_base_costs[province_id] = cost
 
-    def stats_per_province(self):
+        return cost
+
+    def _load_provinces(self):
+        for province_id in provinces.keys():
+            self._load_province(province_id)
+
+    def _load_province(self, province_id):
+        data = provinces[province_id]
+
+        if 'owner' not in data.keys():
+            return
+
+        owner = data['owner']
+        try:
+            self._owners[owner].append(province_id)
+        except KeyError:
+            self._owners[owner] = [ province_id ]
+        self._province_base_costs[province_id] = self._base_cost(province_id)
+
+    def _is_hre(self, owner):
+        try:
+            capital = provinces[int(countries[owner]['capital'])]
+            return (capital['hre'] == 'yes')
+        except KeyError:
+            return False
+
+    def owners(self):
+        return self._owners.keys()
+
+    def stats_for_owner(self, owner):
+        results = { 'total': 0, 'provinces': [] }
+
+        # HRE
+        hre_mult = 1.0
+        if self._is_hre(owner):
+            results['total'] += 20
+            hre_mult = self.HRE_CAPITAL_MULT
+
+        for province_id in self._owners[owner]:
+            cost = self._province_base_costs[province_id] * hre_mult
+            cost += self._extra_cost(province_id)
+            results['provinces'].append( (province_id, cost) )
+            results['total'] += cost
+
+        return results
+
+    def print_stats_per_province(self):
         inverted = {}
         for k, v in self._province_base_costs.iteritems():
+            v += self._extra_cost(k)
             try:
                 inverted[v].append(k)
             except KeyError:
                 inverted[v] = [k]
+
+        print "Assuming a non-HRE capital."
         for cost in sorted(inverted.keys()):
             for province_id in inverted[cost]:
                 print cost, province_id
     
-    def stats(self):
+    def print_stats(self):
         costs = {}
 
         for owner, provs in self._owners.iteritems():
             cost = 0
+            hre_mult = 1.0 if not self._is_hre(owner) else self.HRE_CAPITAL_MULT
             for province_id in provs:
-                cost += self._province_base_costs[province_id]
+                cost += self._province_base_costs[province_id] * hre_mult
+                cost += self._extra_cost(province_id)
             try:
                 costs[cost].append(owner)
             except KeyError:
@@ -182,15 +223,12 @@ class Countries(object):
         for cost in sorted(costs.keys()):
             print cost, ','.join(costs[cost])
 
-    def stats_for_owner(self, owner):
-        # TODO: HRE
-        total = 0
-        for province_id in self._owners[owner]:
-            cost = self._province_base_costs[province_id]
+    def print_stats_for_owner(self, owner):
+        stats = self.stats_for_owner(owner)
+        for province_id, cost in stats['provinces']:
             print province_id, cost
-            total += cost
         print LINE
-        print 'Total', total
+        print 'Total', stats['total']
 
 class Ideas(object):
     @staticmethod
@@ -209,48 +247,71 @@ class Ideas(object):
         cost = float(get_idea_cost(idea, level)) * multiplier
         return (level if not was_missing else -1, cost)
 
-    def stats_for_owner(self, tag):
-        total = 0
-        name, ideas = get_ideas_for_tag(tag)
+    def stats_for_ideas(self, ideas):
+        result = {
+            'total': 0, 'ideas': [], 'ideas_count': 0,
+            'values_missing': False, 'values_exceed_max': False
+        }
 
-        print name, 'ideas:'
         for slot in IDEA_SLOTS:
             for k, v in ideas[slot]:
                 level, cost = self.get_level_and_cost(slot, k, v)
-                print IDEA_COSTS_FMT.format(slot, k, v, level, cost)
-                total += cost
-        print LINE
-        print "Total: %.2f" % total
+                result['ideas'].append( (slot, k, v, level, cost) )
+                result['total'] += cost
+                result['ideas_count'] += 1
+                if level < 0:
+                    result['values_missing'] = True
+                elif level > custom_ideas[k]['max_level']:
+                    result['values_exceed_max'] = True
 
-    def stats(self):
+        return result
+
+    def print_legend(self):
         print "Legend:"
         print "\t> Has more than 10 ideas."
         print "\t+ At least one idea past maximum allowed level."
         print "\t* Has an illegal idea that is not defined."
         print ""
 
+    @staticmethod
+    def get_flags(stats):
+        flags = ''
+        if stats['values_exceed_max']:
+            flags += '+'
+        if stats['values_missing']:
+            flags += '*'
+        if stats['ideas_count'] > 10:
+            flags += '>'
+        return flags
+
+    def print_stats_for_tag(self, tag):
+        name, ideas = get_ideas_for_tag(tag)
+        stats = self.stats_for_ideas(ideas)
+
+        self.print_legend()
+        print name, 'ideas:'
+        for slot, k, v, level, cost in stats['ideas']:
+            print IDEA_COSTS_FMT.format(slot, k, v, level, cost)
+        print LINE
+        print "Total: %.2f %s" % (stats['total'], self.get_flags(stats))
+
+    def print_stats(self):
         costs = {}
         for tag, ideas in national_ideas.iteritems():
-            total = 0
-            ideas_count = 0
-            values_missing = ''
-            values_exceed_max = ''
-            for slot in IDEA_SLOTS:
-                for k, v in ideas[slot]:
-                    level, cost = self.get_level_and_cost(slot, k, v)
-                    total += cost
-                    ideas_count += 1
-                    if level < 0:
-                        values_missing = '*'
-                    elif level > custom_ideas[k]['max_level']:
-                        values_exceed_max = '+'
-            tag += values_exceed_max + values_missing
-            if ideas_count > 10:
+            stats = self.stats_for_ideas(ideas)
+            if stats['values_exceed_max']:
+                tag += '+'
+            if stats['values_missing']:
+                tag += '*'
+            if stats['ideas_count'] > 10:
                 tag += '>'
+            total = stats['total']
             if total not in costs:
                 costs[total] = [tag,]
             else:
                 costs[total].append(tag)
+
+        self.print_legend()
         for total in sorted(costs.keys()):
             print "%.2f %s" % (total, ' '.join(costs[total]))
 
@@ -279,18 +340,30 @@ def main():
     if options.tag != None:
         tag = options.tag.lower()
         if i:
-            i.stats_for_owner(tag)
+            i.print_stats_for_tag(tag)
         if i and c:
             print DOUBLE_LINE, '\n'
         if c:
-            c.stats_for_owner(tag)
+            c.print_stats_for_owner(tag)
 
     else:
-        if i:
-            i.stats()
-        print LINE
-        if c:
-            c.stats()
+        if not c:
+            i.print_stats()
+        elif not i:
+            c.print_stats()
+        else:
+            totals = {}
+            for owner in c.owners():
+                ideas_stats = i.stats_for_ideas(get_ideas_for_tag(owner)[1])
+                cost = c.stats_for_owner(owner)['total']
+                cost += ideas_stats['total']
+                flags = i.get_flags(ideas_stats)
+                try:
+                    totals[cost].append(owner + flags)
+                except KeyError:
+                    totals[cost] = [ owner + flags ]
+            for key in sorted(totals.keys()):
+                print key, ', '.join(totals[key])
 
 if __name__ == '__main__':
     main()

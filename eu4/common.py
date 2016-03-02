@@ -4,7 +4,7 @@ from os.path import join, split, basename
 from eu4.config import common_path
 from lib.nom import nom
 
-__all__ = [ 'cultures', 'culture_map' ]
+__all__ = [ 'cultures', 'culture_map', 'religions', 'religion_map', 'governments' ]
 
 def _load(*args):
     with open(join(common_path, *args), 'r') as f:
