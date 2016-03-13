@@ -224,7 +224,10 @@ class Countries(object):
             print cost, ','.join(costs[cost])
 
     def print_stats_for_owner(self, owner):
-        stats = self.stats_for_owner(owner)
+        try:
+            stats = self.stats_for_owner(owner)
+        except KeyError:
+            stats = { 'provinces': (), 'total': 0 }
         for province_id, cost in stats['provinces']:
             print province_id, cost
         print LINE
