@@ -105,7 +105,7 @@ class Countries(object):
             # Western Isles
             253: 'coastline',
             # Girona
-            212: 'grasslands',
+            212: 'hills',
             # Zurich
             1869: 'hills',
             # Savoie

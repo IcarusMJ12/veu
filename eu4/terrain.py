@@ -8,8 +8,7 @@ def _load_map():
     color_map = {}
     terrain = terrain_txt['terrain']
 
-    for t in terrain:
-        mapping = t[1]
+    for mapping in terrain.values():
         color_map[int(mapping['color'][0])] = mapping['type']
 
     return color_map
